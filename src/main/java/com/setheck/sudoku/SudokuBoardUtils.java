@@ -1,4 +1,4 @@
-package com.setheck;
+package com.setheck.sudoku;
 
 import com.setheck.object.*;
 import org.apache.commons.csv.*;
@@ -9,46 +9,29 @@ import java.util.stream.*;
 
 public class SudokuBoardUtils {
     private static final Logger logger = LoggerFactory.getLogger(SudokuBoardUtils.class);
-    private static final String KEY_FORMAT = "%d,%d";
 
-    public static String getSpaceKey(int x, int y)
-    {
-        return String.format(KEY_FORMAT, x, y);
-    }
 
-    public static int getXfromKey(final String spaceKey)
+    public static SingleSpace[][] loadBoard(List<CSVRecord> parsedBoard)
     {
-        String[] xySpaces = spaceKey.split(",");
-        return Integer.parseInt(xySpaces[0]);
-    }
-
-    public static int getYfromKey(final String spaceKey)
-    {
-        String[] xySpaces = spaceKey.split(",");
-        return Integer.parseInt(xySpaces[1]);
-    }
-
-    public static Map<String, SingleSpace> loadBoard(List<CSVRecord> parsedBoard)
-    {
-        Map<String, SingleSpace> board = new HashMap<>();
+        SingleSpace[][] board = new SingleSpace[9][9];
         int y = 0;
         for (CSVRecord record : parsedBoard)
         {
-            y++;
             int x = 0;
             for (String string : record)
             {
-                x++;
                 try {
                     int value = Integer.parseInt(string);
                     logger.info("Setting {},{} with {}", x, y, value);
-                    board.put(getSpaceKey(x, y), new SingleSpace(value));
+                    board[x][y] = new SingleSpace(value);
                 }
                 catch(Exception ignored)
                 {
                     //nope
                 }
+                x++;
             }
+            y++;
         }
         return board;
     }
@@ -60,7 +43,7 @@ public class SudokuBoardUtils {
         return clonedBoard;
     }
 
-    public void printRandomInfo(Map<String, SingleSpace> board, int count)
+    public void printRandomInfo(SingleSpace[][] board, int count)
     {
         final Random random = new Random();
         IntStream.range(0, count)
@@ -68,23 +51,22 @@ public class SudokuBoardUtils {
                 {
                     int x = (Math.abs(random.nextInt()) % 8) + 1;
                     int y = (Math.abs(random.nextInt()) % 8) + 1;
-                    SingleSpace space = board.get(getSpaceKey(x, y));
+                    SingleSpace space = board[x][x];
                     logger.info("Ramdom pick of {},{} is {}", x, y, space);
                 });
     }
 
-    public static boolean copyValues(Map<String, SingleSpace> source, Map<String,SingleSpace> target)
+    public static boolean copyValues(SingleSpace[][] source, SingleSpace[][] target)
     {
         boolean copied = false;
         for (int x = 1; x < 10; x++)
         {
             for (int y = 1; y < 10; y ++)
             {
-                String spaceKey = getSpaceKey(x, y);
-                SingleSpace sourceSpace = source.get(spaceKey);
+                SingleSpace sourceSpace = source[x][y];
                 if (sourceSpace.hasValue())
                 {
-                    SingleSpace targetSpace = target.get(spaceKey);
+                    SingleSpace targetSpace = target[x][y];
                     targetSpace.setValue(sourceSpace.getValue());
                     copied = true;
                 }
@@ -93,15 +75,15 @@ public class SudokuBoardUtils {
         return copied;
     }
 
-    public static void printBoard(Map<String, SingleSpace> board, boolean withPossible)
+    public static void printBoard(SingleSpace[][] board, boolean withPossible)
     {
-        for (int y = 1; y < 10; y++)
+        for (int x = 0; x < board.length; x++)
         {
             StringBuilder builder = new StringBuilder(10 * 2);
-            for (int x = 1; x < 10; x++)
+            for (int y = 0; y < board[x].length; y++)
             {
-                logger.debug("Getting at {},{}", x ,y);
-                SingleSpace temp = board.get(getSpaceKey(x, y));
+                logger.debug("Getting at {},{}", x, y);
+                SingleSpace temp = board[y][x];
                 builder.append(temp.getValue());
                 if (withPossible)
                 {
@@ -109,8 +91,15 @@ public class SudokuBoardUtils {
                 }
                 builder.append(",");
             }
-            logger.info(builder.append("\n").toString());
+            logger.info(builder.toString());
         }
+    }
+
+    public static List<Integer> possibleValues()
+    {
+        return IntStream.range(1,10)
+                .boxed()
+                .collect(Collectors.toList());
     }
 
     public static boolean validateBoard()
